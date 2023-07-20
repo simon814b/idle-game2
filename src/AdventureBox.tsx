@@ -1,11 +1,14 @@
 import React from "react"
 import { styled } from "styled-components"
+import { GlobalContext, Zone } from "./Context"
 
 interface AdventureBoxProps {
     ZoneName: string
+    ZoneId: Zone
     SearchTime: number
-    SearchReward: number
-    GainReward: (r: number) => void
+    BaseReward: number
+    RewardMultiplier: number
+    BasePrice: number
 }
 
 const ZoneDiv = styled.div<{progression: number}>`
@@ -22,10 +25,21 @@ transition-duration: 0.2s;
     cursor: pointer;
 }
 `
+const ZoneButton = styled.button`
+border-radius: 10px;
+border: 2px solid black;
+transition-duration: 0.2s;
+&:hover {
+    font-weight: bold;
+    cursor: pointer;
+}
+`
 
 const AdventureBox = (props: AdventureBoxProps) => {
+    const { gold, updateGold, upgradeZone, zoneLevels } = React.useContext(GlobalContext)
     const [progression, setProgression] = React.useState(0)
     const [activated, setActivated] = React.useState(false)
+    const level = zoneLevels.get(props.ZoneId) ?? 0
     const updateProgression = async () => {
         if (progression + 1 >= props.SearchTime) {
             gainReward()
@@ -37,7 +51,7 @@ const AdventureBox = (props: AdventureBoxProps) => {
         return
     }
     const gainReward = () => {
-        props.GainReward(props.SearchReward)
+        updateGold(props.BaseReward*level*props.RewardMultiplier)
     }
     React.useEffect(() => {
         if (activated) {
@@ -49,9 +63,25 @@ const AdventureBox = (props: AdventureBoxProps) => {
     const onClick = () => {
         setActivated(true)
     }
-    return <ZoneDiv progression={100*progression/props.SearchTime} onClick={onClick}>
-        <div style={{ color: 'black' ,textAlign: 'center'}}>{props.ZoneName}</div>
+    return (<div style={{display: 'flex'}}><ZoneDiv progression={100*progression/props.SearchTime} onClick={onClick}>
+        <div style={{ color: 'black' ,textAlign: 'center'}}>{props.ZoneName + ' (' + props.BaseReward*level*props.RewardMultiplier + ' gold)'}</div>
     </ZoneDiv>
+     <ZoneButton style={{border: '2px solid black'}} onClick={()=>{
+        if (level === 0) {
+            const cost = props.BasePrice*10
+            if (gold-cost >=0) {
+                updateGold(-cost)
+                upgradeZone(props.ZoneId)
+            }
+        } else {
+            const cost = props.BasePrice*level*level
+            if (gold-cost >=0) {
+                updateGold(-cost)
+                upgradeZone(props.ZoneId)
+            }
+        }
+        }}>
+     {"Upgrade for " + ((level === 0) ? props.BasePrice*10 : props.BasePrice*level*level) + " gold"}</ZoneButton></div>)
 }
 
 export { AdventureBox }
